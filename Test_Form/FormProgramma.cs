@@ -411,8 +411,8 @@ namespace Test_Form
         {
             //eq piano: ax + by + cz + d = 0;
             //normal : a,b,loadingForm
-            float a = 1;
-            float b = 0;
+            float a = 0;
+            float b = 1;
             float c = 0;
             float d = 0;
             Vector4 plane = new Vector4(a, b, c, d);
@@ -424,43 +424,64 @@ namespace Test_Form
         }
         public void FromPlaneToImage(Int16[][] iArr_VolImgInt16, int width, int height, int depth, float a, float b, float c, float d)
         {
-            int x = 0, y = 0, z = 0;
-            Int16[] planeImage = new Int16[width* depth];
-            Vector3 pos = new Vector3(x, y, z);
+            Int16[,] planeImage = new Int16[width, depth]; //            Int16[,] planeImage = new Int16[width,depth];
+            Vector3 pos;
             Vector3 plane = new Vector3(a, b, c);
 
-            for (z = 0; z < depth; z++)
+            for (pos.Z = 0; pos.Z < depth; pos.Z++)
             {
-                for (y = 0; y < height; y++)
+                for (pos.Y = 0; pos.Y < height; pos.Y++)
                 {
-                    for (x = 0; x < width; x++)
+                    for (pos.X = 0; pos.X < width; pos.X++)
                     {
                         // Verifica se il punto (x, y, z) soddisfa l'equazione del piano
                         //Math.Abs(a * x + b * y + c * z + d) < 1
                         if (Vector3.Dot(pos,plane) + d == 0) 
                         {
-                            planeImage[x* y] = CoordsToPixel(x,y,z);
+                            try
+                            {
+                                planeImage[(int)pos.X, (int)pos.Z] = CoordsToPixel((int)pos.X, (int)pos.Y, (int)pos.Z);
+                            }
+                            catch (Exception)
+                            {
+
+                                throw;
+                            }
                         }
                     }
                 }
-                //shortArrayToByteFullContrast(planeImage, _bArr_ImgResCor);
-                view.DrawInBitmap(ref view.Joy_Coronal, _bArr_ImgResCor, width, depth);
-                FlowCoronal.Refresh();
             }
+            shortArrayToByteFullContrast(MultiDimToJagged(planeImage), _bArr_ImgResCor);
+            view.DrawInBitmap(ref view.Joy_Coronal, _bArr_ImgResCor, width, depth);
+            File.WriteAllBytes(@"C:\test\coronal.raw", iArr_Coronal.SelectMany(t => BitConverter.GetBytes(t)).ToArray());
+            FlowCoronal.Refresh();
         }
         private Int16 CoordsToPixel(int x, int y, int z) 
         {
             if((x<=model.nImmCorSag && y<= model.nImmCorSag && z<= model.nFileDaLeggere) && (x>=0 && y>=0 && z >=0))
             {
-                return iArr_VolImgInt16[z][x*y];
+                return iArr_VolImgInt16[z][y* model.nImmCorSag + x];
             }
             else
             {
                 return 0;
             }
         }
-
-
+        
+        private Int16[] MultiDimToJagged(Int16[,] arr)
+        {
+            int lengthX = arr.GetLength(0);
+            int lengthY = arr.GetLength(1);
+            Int16[] array = new Int16[lengthX * lengthY];
+            for (int x = 0; x < lengthX; x++)
+            {
+                for (int y = 0; y < lengthY; y++)
+                {
+                    array[y + x * lengthY] = arr[x, y];
+                }
+            }
+            return array;
+        }
 
         void shortArrayToByteFullContrast(short[] shortArray, byte[] byteArray)
         {
