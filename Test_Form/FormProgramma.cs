@@ -4,6 +4,10 @@ using static System.Math;
 using Test_f;
 using static System.Windows.Forms.DataFormats;
 using System.Drawing.Drawing2D;
+using System;
+using FellowOakDicom;
+using FellowOakDicom.Imaging;
+using FellowOakDicom.IO.Buffer;
 
 namespace Test_Form
 {
@@ -55,8 +59,7 @@ namespace Test_Form
         public int i_offset_Button = 100; //(px)
         public int i_heightMenuBar;
         int[,] i_matriceImm = new int[2, 2];
-        int i_Image_Width = 1024, i_Image_Height = 1024;
-        public Point _PointPivotAx, _PointPivotCor, _PointPivotSag;
+        public Point _PointPivotAx, _PointPivotCor, _PointPivotSag,_PointPivotGeneric;
 
 
         Int16[][] iArr_VolImgInt16 = new Int16[2][]; // array immagine 16 Bit
@@ -116,17 +119,9 @@ namespace Test_Form
             progBMainPanel = (ProgressBar)loadingForm.Get_loadingBar();
             InitializeComponent();
             DoubleBuffered = true;
-            //graphics = this.CreateGraphics();
-            //this.Size = this.MaximumSize;
             view = new Test_f.View(this.CreateGraphics(), this, model);
             this.MouseWheel += new MouseEventHandler(MouseeWheel);
-
-            //var asdf = new View(this.CreateGraphics());
-
-             
-      
-
-        //asdf.JoySiSveglia += Asdf_JoySiSveglia;
+            //asdf.JoySiSveglia += Asdf_JoySiSveglia;
     }
 
         public PictureBox GetFlowAxial()
@@ -146,6 +141,8 @@ namespace Test_Form
         {
             return _PointMousePos;
         }
+
+
 
         private void _FormProgramma_Resize(object sender, EventArgs e)
         {
@@ -211,7 +208,7 @@ namespace Test_Form
         }
 
 
-        private void softOpenFile()
+        public void softOpenFile()
         {
             //byte a = 3;
             //byte b = 5;
@@ -235,8 +232,6 @@ namespace Test_Form
 
                 iArr_VolImgInt16 = new Int16[model.nFileDaLeggere][]; // array immagine 16 Bit
 
-                MatrixArr_VolImgInt16 = new Int16[model.nFileDaLeggere,1,1];
-
                 byte[] bArr_Img;
 
                 //Leggo i byte dalle immagini
@@ -246,14 +241,23 @@ namespace Test_Form
 
                     progBMainPanel.Value = i;
 
-                    bArr_Img = File.ReadAllBytes(sArr_FilePathExam[i]);
+                    DicomFile dicomFile = DicomFile.Open(sArr_FilePathExam[i]);
+                    DicomPixelData pixelData = DicomPixelData.Create(dicomFile.Dataset);
+                    if(i==0)
+                        model.nImmCorSag = pixelData.Width;
+                    // Extract pixel data from the first frame (assuming single-frame image)
+                    IByteBuffer buffer = pixelData.GetFrame(0);
+                    bArr_Img = buffer.Data;
+                    //bArr_Img = File.ReadAllBytes(sArr_FilePathExam[i]);
 
-                    iArr_VolImgInt16[i] = new Int16[bArr_Img.Length / 2]; // array immagine 16 Bit
-
+                    iArr_VolImgInt16[i] = new Int16[bArr_Img.Length / 2]; // array immagine 16 Bit   model.nImmCorSag*model.nImmCorSag
                     Buffer.BlockCopy(bArr_Img, 0, iArr_VolImgInt16[i], 0, bArr_Img.Length);
 
-                    model.nImmCorSag = (int)Sqrt(bArr_Img.Length / 2);
                 }
+                //view.Joy_Axial = new Bitmap((int)(Sqrt(2)*model.nImmCorSag), (int)(Sqrt(2)*model.nImmCorSag));
+                view.Joy_Axial = new Bitmap(model.nImmCorSag, model.nImmCorSag);
+                view.Joy_Coronal = new Bitmap(model.nImmCorSag, model.nFileDaLeggere);
+                view.Joy_Sagital = new Bitmap(model.nImmCorSag, model.nFileDaLeggere);
 
                 loadingForm.Close();
 
@@ -268,13 +272,15 @@ namespace Test_Form
                 UpdatePivotPoint(ref _PointPivotAx, FlowAxial, model.i_PosTrackCor, model.i_PosTrackSag, model.nImmCorSag, model.nImmCorSag);
                 UpdatePivotPoint(ref _PointPivotCor, FlowCoronal, model.i_PosTrackSag, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere);
                 UpdatePivotPoint(ref _PointPivotSag, FlowSaggital, model.i_PosTrackCor, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere);
+                UpdatePivotPoint(ref _PointPivotGeneric, FlowImage, model.i_PosTrackCor, model.i_PosTrackSag, model.nImmCorSag, model.nImmCorSag);
+
 
                 lbl1.Text = "";
 
-                VisteInclinate(model.thetaAx);
-                //AxialPreparation();
-                //SagittalPreparation();
-                //CoronalPreparation();
+                //VisteInclinate(model.thetaAx);
+                AxialPreparation();
+                SagittalPreparation();
+                CoronalPreparation();
                 view.DisegnaContorni();
 
                 Application.DoEvents();
@@ -282,23 +288,12 @@ namespace Test_Form
 
         }
 
-        private Rectangle FlowToRect(PictureBox f)
-        {
-            Rectangle r = new Rectangle(f.Location, f.Size);
-            return r;
-        }
 
         private void scalaDiGrigiToolStripMenuItem_Click(object sender, EventArgs e)
         {
 
         }
 
-        //private void Setup_trackbar(System.Windows.Forms.TrackBar trackbar, int nfile)
-        //{
-        //    trackbar.Minimum = 0;
-        //    trackbar.Maximum = nfile - 1;
-        //    trackbar.Visible = true;
-        //}
 
 
         /// <summary>
@@ -308,17 +303,66 @@ namespace Test_Form
         public void AxialPreparation()
         {
             b_image_loaded = true;
-            i_Image_Height = 1024;
 
+            iArr_Axial = new Int16[model.nImmCorSag * model.nImmCorSag];
 
-            shortArrayToByteFullContrast(iArr_VolImgInt16[model.i_PosTrackAx], _bArr_ImgResAx);
+            Vector3 center = new Vector3(model.nImmCorSag / 2, model.nImmCorSag / 2, model.nFileDaLeggere / 2);
 
-            view.DrawInBitmap(ref view.Joy_Axial, _bArr_ImgResAx, i_Image_Width, i_Image_Height);
+            //Parallel.For(-model.nImmCorSag/2, model.nImmCorSag/2, y =>
+            for(int y = -model.nImmCorSag / 2; y< model.nImmCorSag / 2; y++)
+            { 
+                for (int x = -model.nImmCorSag/2; x < model.nImmCorSag/2; x++)
+                {
+                    int x_center = x + model.nImmCorSag / 2;
+                    int y_center = y + model.nImmCorSag/2;
+                    Vector3 new_point = Rotate3DPoint(x, y, model.i_PosTrackAx - model.nFileDaLeggere / 2, Rx(FlowAxial, _PointPivotAx.X, model.nImmCorSag), Ry(FlowAxial, _PointPivotAx.Y, model.nImmCorSag), model.i_PosTrackAx, model.thetaSag, model.thetaCor, 0);
+                    Vector3 new_coords = new_point + center;
+                    iArr_Axial[model.nImmCorSag * y_center + x_center] = CoordsToPixel(new_coords);
+                }
+            }
+            //);
+
+            shortArrayToByteFullContrast(iArr_Axial, _bArr_ImgResAx);
+
+            view.DrawInBitmap(ref view.Joy_Axial, _bArr_ImgResAx, model.nImmCorSag, model.nImmCorSag);
             FlowAxial.Refresh();
+            FlowImage.Refresh();
             //view.DrawBitmap(view.Joy_Axial, view.rect_Axial);
         }
 
+        public void CoronalPreparation()
+        {
+            //if (down)
+            //{
+            b_image_loaded = true;
 
+            if (!b_ArraycoronalePreparato)
+            {
+                iArr_Coronal = new Int16[model.nImmCorSag * model.nFileDaLeggere];
+                b_ArraycoronalePreparato = true;
+
+            }
+            var center = new Vector3(model.nImmCorSag / 2, model.nImmCorSag / 2, model.nFileDaLeggere / 2);
+
+            Parallel.For(-model.nFileDaLeggere/2, model.nFileDaLeggere/2, z =>
+            {
+                {
+                    for (int x = -model.nImmCorSag/2; x < model.nImmCorSag/2; x++)
+                    {
+                        int x_center = x + model.nImmCorSag / 2;
+                        int z_center = z + model.nFileDaLeggere / 2;
+                        Vector3 new_point = Rotate3DPoint(x, model.i_PosTrackCor, z, Rx(FlowAxial, _PointPivotCor.X, model.nImmCorSag),model.i_PosTrackCor ,Ry(FlowAxial, _PointPivotCor.Y, model.nFileDaLeggere), 0,0,model.thetaAx);
+                        Vector3 new_coords = new_point + center;
+                        iArr_Coronal[model.nImmCorSag * z_center + x_center] = CoordsToPixel(new_coords);
+                    }
+                }
+            });
+            //}
+            shortArrayToByteFullContrast(iArr_Coronal, _bArr_ImgResCor);
+            view.DrawInBitmap(ref view.Joy_Coronal, _bArr_ImgResCor, model.nImmCorSag, model.nFileDaLeggere);
+            FlowCoronal.Refresh();
+
+        }
 
         /// <summary>
         /// Prepara le assiali per essere visualizzate
@@ -330,7 +374,7 @@ namespace Test_Form
             //if (down)
             //{
             b_image_loaded = true;
-            i_Image_Height = model.nFileDaLeggere;
+
 
             if (!b_ArraysagittalePreparato)
             {
@@ -342,23 +386,18 @@ namespace Test_Form
             //int ind1 = 0;
             //int ind3 = model.nImmCorSag - Pos;
 
-            Parallel.For(0, model.nFileDaLeggere, iZ =>
+            Parallel.For(0, model.nFileDaLeggere, z =>
             {
-                int ind0 = model.nImmCorSag * iZ;
-                int ind2 = model.nImmCorSag - model.i_PosTrackSag;
-
-                for (int iX = 0; iX < model.nImmCorSag; iX++)
+                for (int x = 0; x < model.nImmCorSag; x++)
                 {
-
-                    int ind1 = ind0 + iX;
-                    int ind3 = model.nImmCorSag * (model.nImmCorSag - iX) - ind2;
-                    iArr_Sagital[ind1] = iArr_VolImgInt16[iZ][ind3];
+                    Vector3 new_point = Rotate3DPoint(model.i_PosTrackSag,x,z, Rx(FlowSaggital, _PointPivotCor.X, model.nImmCorSag), Ry(FlowSaggital, _PointPivotCor.Y, model.nFileDaLeggere), model.i_PosTrackSag , 0,0,model.thetaAx);
+                    //iArr_Sagital[model.nImmCorSag * z + x] = CoordsToPixel(new_point);
 
                 }
             });
             //File.WriteAllBytes(@"C:\test\sagittal.raw", iArr_Sagital.SelectMany(t => BitConverter.GetBytes(t)).ToArray());
             shortArrayToByteFullContrast(iArr_Sagital, _bArr_ImgResSag);
-            view.DrawInBitmap(ref view.Joy_Sagital, _bArr_ImgResSag, i_Image_Width, i_Image_Height);
+            view.DrawInBitmap(ref view.Joy_Sagital, _bArr_ImgResSag, model.nImmCorSag, model.nFileDaLeggere);
             FlowSaggital.Refresh();
         }
 
@@ -367,66 +406,33 @@ namespace Test_Form
         /// Prepara le assiali per essere visualizzate
         /// </summary>
         /// <param name="Immagine"> Array Immagine di Byte da visualizzare </param>
-        public void CoronalPreparation()
+        
+
+        //private void VisteInclinate(float theta)
+        //{
+        //    //eq piano: ax + by + cz + d = 0;
+        //    //normal : a,b,loadingForm
+        //    float a = 0;
+        //    float b = 1;
+        //    float c = 0;
+        //    float d = 0;
+        //    Vector4 plane = new Vector4(a, b, c, d);
+        //    //FromPlaneToImage(iArr_VolImgInt16, model.nImmCorSag, model.nImmCorSag, model.nFileDaLeggere, a, b, c, d);
+        //    Vector4 Newplane;
+        //    Matrix4x4 RotationMatrix = Matrix4x4.CreateRotationZ(theta);
+        //    //Plane plane = new Plane(a, b, loadingForm, d);
+        //    Newplane = Vector4.Transform(plane, RotationMatrix);
+        //}
+        /*public void FromPlaneToImage(Int16[][] iArr_VolImgInt16, int width, int height, int depth, float a, float b, float c, float d)
         {
-            //if (down)
-            //{
-            b_image_loaded = true;
-            i_Image_Height = model.nFileDaLeggere;
-
-            if (!b_ArraycoronalePreparato)
-            {
-                iArr_Coronal = new Int16[model.nImmCorSag*model.nFileDaLeggere];
-                b_ArraycoronalePreparato = true;
-
-            }
-
-            Parallel.For(0, model.nFileDaLeggere, iZ =>
-            {
-                {
-                    int indZ = 1024 * iZ;
-
-                    for (int iX = 0; iX < 1024; iX++)
-                    {
-                        //iArr_Sagital[1024 * iZ + iX] = iArr_VolImgInt16[iZ][Pos + (1024 * iX)]; // Giusto ma riflesso
-
-                        int ind1 = indZ + iX;
-
-                        int ind2 = (1024 - model.i_PosTrackCor) * 1024 - 1024 + iX;
-
-                        iArr_Coronal[ind1] = iArr_VolImgInt16[iZ][ind2];
-                    }
-                }
-            });
-            //}
-            shortArrayToByteFullContrast(iArr_Coronal,_bArr_ImgResCor);
-            view.DrawInBitmap(ref view.Joy_Coronal, _bArr_ImgResCor, i_Image_Width, i_Image_Height);
-            FlowCoronal.Refresh();
-            //view.DrawBitmap(view.Joy_Coronal, view.rect_Coronal);
-            //File.WriteAllBytes(@"C:\test\coronal.raw", iArr_Coronal.SelectMany(t => BitConverter.GetBytes(t)).ToArray());
-            //}
-        }
-
-        private void VisteInclinate(float theta)
-        {
-            //eq piano: ax + by + cz + d = 0;
-            //normal : a,b,loadingForm
-            float a = 0;
-            float b = 1;
-            float c = 0;
-            float d = 0;
-            Vector4 plane = new Vector4(a, b, c, d);
-            FromPlaneToImage(iArr_VolImgInt16, model.nImmCorSag, model.nImmCorSag, model.nFileDaLeggere, a, b, c, d);
-            Vector4 Newplane;
-            Matrix4x4 RotationMatrix = Matrix4x4.CreateRotationZ(theta);
-            //Plane plane = new Plane(a, b, loadingForm, d);
-            Newplane = Vector4.Transform(plane, RotationMatrix);
-        }
-        public void FromPlaneToImage(Int16[][] iArr_VolImgInt16, int width, int height, int depth, float a, float b, float c, float d)
-        {
-            Int16[,] planeImage = new Int16[width, depth]; //            Int16[,] planeImage = new Int16[width,depth];
+            //Int16[,] planeImage = new Int16[width, depth];
+            Int16[] planeImage = new Int16[width*depth];
             Vector3 pos;
             Vector3 plane = new Vector3(a, b, c);
+            if (true)
+            {
+
+            }
 
             for (pos.Z = 0; pos.Z < depth; pos.Z++)
             {
@@ -438,35 +444,89 @@ namespace Test_Form
                         //Math.Abs(a * x + b * y + c * z + d) < 1
                         if (Vector3.Dot(pos,plane) + d == 0) 
                         {
-                            try
-                            {
-                                planeImage[(int)pos.X, (int)pos.Z] = CoordsToPixel((int)pos.X, (int)pos.Y, (int)pos.Z);
-                            }
-                            catch (Exception)
-                            {
-
-                                throw;
-                            }
+                            planeImage[(int)pos.X + (int)pos.Z* model.nFileDaLeggere] = CoordsToPixel((int)pos.X, 60, (int)pos.Z);
+                            
                         }
                     }
                 }
             }
-            shortArrayToByteFullContrast(MultiDimToJagged(planeImage), _bArr_ImgResCor);
+            shortArrayToByteFullContrast(planeImage, _bArr_ImgResCor);
             view.DrawInBitmap(ref view.Joy_Coronal, _bArr_ImgResCor, width, depth);
             File.WriteAllBytes(@"C:\test\coronal.raw", iArr_Coronal.SelectMany(t => BitConverter.GetBytes(t)).ToArray());
             FlowCoronal.Refresh();
-        }
-        private Int16 CoordsToPixel(int x, int y, int z) 
+        }*/
+
+
+        public static Point Rotate2DPoint(double x, double y, double cx, double cy, double angle)
         {
-            if((x<=model.nImmCorSag && y<= model.nImmCorSag && z<= model.nFileDaLeggere) && (x>=0 && y>=0 && z >=0))
+            // Trasla il punto in modo che il perno sia all'origine
+            double translatedX = x - cx;
+            double translatedY = y - cy;
+
+            // Applica la rotazione
+            double rotatedX = translatedX * Math.Cos(angle) - translatedY * Math.Sin(angle);
+            double rotatedY = translatedX * Math.Sin(angle) + translatedY * Math.Cos(angle);
+
+            // Trasla il punto di nuovo alla posizione originale del perno
+            int finalX = (int)(rotatedX + cx);
+            int finalY = (int)(rotatedY + cy);
+
+            return new Point(finalX, finalY);
+        }
+
+        public static Vector3 Rotate3DPoint(double x, double y, double z, double cx, double cy, double cz, double angleX, double angleY, double angleZ)
+        {
+            double translatedX = x - cx;
+            double translatedY = y - cy;
+            double translatedZ = z - cz;
+
+            // Applica la rotazione attorno all'asse Z
+            double rotatedX1 = translatedX;
+            double rotatedY1 = translatedY * Math.Cos(angleX) - translatedZ * Math.Sin(angleX);
+            double rotatedZ1 = translatedY * Math.Sin(angleX) + translatedZ * Math.Cos(angleX);
+
+            // Rotazione attorno all'asse Y
+            double rotatedX2 = rotatedX1 * Math.Cos(angleY) + rotatedZ1 * Math.Sin(angleY);
+            double rotatedY2 = rotatedY1;
+            double rotatedZ2 = -rotatedX1 * Math.Sin(angleY) + rotatedZ1 * Math.Cos(angleY);
+
+            // Rotazione attorno all'asse Z
+            double rotatedX3 = rotatedX2 * Math.Cos(angleZ) - rotatedY2 * Math.Sin(angleZ);
+            double rotatedY3 = rotatedX2 * Math.Sin(angleZ) + rotatedY2 * Math.Cos(angleZ);
+            double rotatedZ3 = rotatedZ2;
+
+            // Trasla il punto ruotato di nuovo alla posizione originale
+            double finalX = rotatedX3 + cx;
+            double finalY = rotatedY3 + cy;
+            double finalZ = rotatedZ3 + cz;
+
+            return new Vector3((float)finalX, (float)finalY, (float)finalZ);
+        }
+        private Int16 CoordsToPixel(Vector3 new_coords) 
+        {
+
+
+            try
             {
-                return iArr_VolImgInt16[z][y* model.nImmCorSag + x];
+                if (new_coords.X >= 0 &&
+                    new_coords.Y >= 0 &&
+                    new_coords.Z >=0     &&   new_coords.X < model.nImmCorSag &&
+                                              new_coords.Y < model.nImmCorSag &&
+                                              new_coords.Z < model.nFileDaLeggere) 
+                {
+                    //System.Diagnostics.Debug.WriteLine("val " + iArr_VolImgInt16[(int)coords.Z + model.nFileDaLeggere / 2][(int)(coords.Y + model.nImmCorSag / 2) * model.nImmCorSag + (int)coords.X + model.nImmCorSag / 2] +" --x: " + coords.X + " -y: " + coords.Y + " -z: " + coords.Z);
+                    return iArr_VolImgInt16[(int)new_coords.Z][(int)(new_coords.Y) * model.nImmCorSag + (int)new_coords.X];
+                }
+                else
+                    return 0;
             }
-            else
+            catch (Exception)
             {
-                return 0;
+
+                throw;
             }
         }
+
         
         private Int16[] MultiDimToJagged(Int16[,] arr)
         {
@@ -515,22 +575,11 @@ namespace Test_Form
             });
         }
 
-        private void _button1_Click(object sender, EventArgs e)
-        {
-           
-        }
-
-        #region DrawLine
-
-        
-
-
-        #endregion
-        
-        
 
         private void FlowLAxial_Paint(object sender, PaintEventArgs e)
         {
+            if (view.Joy_Axial == null)
+                return;
             e.Graphics.DrawImage(view.Joy_Axial, 0,0, FlowAxial.Width, FlowAxial.Height);
             view.DrawInclinedLineOnFlow(e.Graphics, FlowAxial, model.i_PosTrackSag, model.i_PosTrackCor, model.nImmCorSag, model.nImmCorSag, view._BrushColoreSag, view._BrushColoreCor, model.thetaAx, _PointPivotAx);
             //e.Graphics.DrawEllipse(new Pen(Color.Red), _PointPivotAx.X - 5, _PointPivotAx.Y - 5, 10, 10);
@@ -538,35 +587,33 @@ namespace Test_Form
         }
         private void FlowSaggital_Paint(object sender, PaintEventArgs e)
         {
+            if (view.Joy_Sagital == null)
+                return;
             e.Graphics.DrawImage(view.Joy_Sagital, 0, 0, FlowSaggital.Width, FlowSaggital.Height);
             view.DrawInclinedLineOnFlow(e.Graphics, FlowSaggital, model.i_PosTrackCor, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere, view._BrushColoreCor, view._BrushColoreAx, model.thetaSag, _PointPivotSag);
+            //e.Graphics.DrawEllipse(new Pen(Color.Red), _PointPivotSag.X - 5, _PointPivotSag.Y - 5, 10, 10);
+            //e.Graphics.FillEllipse(new SolidBrush(Color.Red), _PointPivotSag.X - 5, _PointPivotSag.Y - 5, 10, 10);
         }
 
         private void FlowCoronal_Paint(object sender, PaintEventArgs e)
         {
+            if (view.Joy_Coronal == null)
+                return;
             e.Graphics.DrawImage(view.Joy_Coronal, 0, 0, FlowCoronal.Width, FlowCoronal.Height);
             view.DrawInclinedLineOnFlow(e.Graphics, FlowCoronal, model.i_PosTrackSag, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere, view._BrushColoreSag, view._BrushColoreAx, model.thetaCor, _PointPivotCor);
             //e.Graphics.DrawEllipse(new Pen(Color.Red), _PointPivotCor.X - 5, _PointPivotCor.Y - 5, 10, 10);
             //e.Graphics.FillEllipse(new SolidBrush(Color.Red), _PointPivotCor.X-5, _PointPivotCor.Y-5, 10, 10);
         }
 
-        /*protected override void OnResizeBegin(EventArgs e)
-        {
-            SuspendLayout();
-            base.OnResizeBegin(e);
-        }
-        protected override void OnResizeEnd(EventArgs e)
-        {
-            ResumeLayout();
-            base.OnResizeEnd(e);
-        }*/
 
-
-        public void NewPose(Rectangle r,Control c)
+        private void FlowImage_Paint(object sender, PaintEventArgs e)
         {
-            int newX = 0;
-            int newY = 0;
-            c.Location = new Point(newX, newY);
+            if (view.Joy_Axial == null)
+                return;
+            e.Graphics.DrawImage(view.Joy_Axial, 0, 0, FlowImage.Width, FlowImage.Height);
+            view.DrawInclinedLineOnFlow(e.Graphics, FlowImage, model.i_PosTrackSag, model.i_PosTrackCor, model.nImmCorSag, model.nImmCorSag, view._BrushColoreSag, view._BrushColoreCor, model.thetaAx, _PointPivotGeneric);
+            //e.Graphics.DrawEllipse(new Pen(Color.Red), _PointPivotGeneric.X - 5, _PointPivotGeneric.Y - 5, 10, 10);
+            //e.Graphics.FillEllipse(new SolidBrush(Color.Red), _PointPivotGeneric.X-5, _PointPivotGeneric.Y-5, 10, 10);
         }
 
         //from stackImg to formWidth
@@ -610,6 +657,15 @@ namespace Test_Form
             return NewValue;
         }
 
+        public static int Rx(PictureBox flow,int Pivotx, int nImm)
+        {
+            return (Pivotx / flow.Width * nImm)- nImm/2;
+        }
+        public static int Ry(PictureBox flow, int Pivoty, int nImm)
+        {
+            return (Pivoty / flow.Height * nImm)- nImm/2;
+        }
+
         #region Mouse
 
         int quadratoMove = 30;
@@ -617,9 +673,10 @@ namespace Test_Form
         private void MuoviRuotaScorriCheck(PictureBox flow,Point PointPivot,MouseEventArgs e)
         {
             //
-
+            
             if ((_PointMousePos.X < PointPivot.X + quadratoMove && _PointMousePos.X > PointPivot.X - quadratoMove) && (_PointMousePos.Y < PointPivot.Y + quadratoMove && _PointMousePos.Y > PointPivot.Y - quadratoMove))
             {
+                //label2.Text = inUse.ToString() + down.ToString();
                 if (!inUse && down)
                 {
                     inUse = true;
@@ -766,7 +823,7 @@ namespace Test_Form
             //    }
             }
         }
-
+        bool stop =false;
         private void FlowAxial_MouseMove(object sender, MouseEventArgs e)
         {
             difference = e.Y - previousLocation;
@@ -786,15 +843,19 @@ namespace Test_Form
                 }
                 view.JustAx();
             }
-            else if (b_Move)
+            else if (b_Move && stop)
             {
                 model.i_PosTrackSag = newRangeX(FlowAxial, _PointMousePos.X, model.nImmCorSag); //_PointMousePos.X * model.nImmCorSag / FlowAxial.Width
                 model.i_PosTrackCor = newRangeY(FlowAxial, _PointMousePos.Y, model.nImmCorSag); //newRangeY(FlowAxial, mouseCoordsToFlowY, model.nImmCorSag)
                 //view.RefleshFlow(FlowAxial);
                 FlowAxial.Refresh();
+                FlowImage.Refresh();
                 UpdatePivotPoint(ref _PointPivotAx, FlowAxial, model.i_PosTrackSag, model.i_PosTrackCor, model.nImmCorSag, model.nImmCorSag);
+                UpdatePivotPoint(ref _PointPivotGeneric, FlowImage, model.i_PosTrackCor, model.i_PosTrackSag, model.nImmCorSag, model.nImmCorSag);
                 CoronalPreparation();
+                UpdatePivotPoint(ref _PointPivotCor, FlowCoronal, model.i_PosTrackSag, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere);
                 SagittalPreparation();
+                UpdatePivotPoint(ref _PointPivotSag, FlowSaggital, model.i_PosTrackCor, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere);
                 Application.DoEvents();
             }
             else if (b_Rotate)
@@ -802,8 +863,9 @@ namespace Test_Form
                 model.thetaAx = (float)Math.Atan2(posizioneRelForm.Y, posizioneRelForm.X);
                 label2.Text = Math.Round(180 / Math.PI * model.thetaAx,2).ToString();
                 FlowAxial.Refresh();
-                FlowCoronal.Refresh();
-                FlowSaggital.Refresh();
+                FlowImage.Refresh();
+                CoronalPreparation();
+                SagittalPreparation();
             }
             previousLocation = e.Location.Y;
         }
@@ -811,6 +873,10 @@ namespace Test_Form
         private void FlowCoronal_MouseMove(object sender, MouseEventArgs e)
         {
             difference = e.Y - previousLocation;
+            _PointMousePos.X = e.X;
+            _PointMousePos.Y = e.Y;
+            //Sposta
+            posizioneRelForm = CoordsToCenterPivot(new Point(_PointMousePos.X, _PointMousePos.Y), _PointPivotCor);
             MuoviRuotaScorriCheck(FlowCoronal,_PointPivotCor, e);
             if (b_Scroll)
             {
@@ -826,26 +892,31 @@ namespace Test_Form
                 model.i_PosTrackSag = newRangeX(FlowCoronal, _PointMousePos.X, model.nImmCorSag);
                 model.i_PosTrackAx = newRangeY(FlowCoronal, _PointMousePos.Y, model.nFileDaLeggere);
                 //view.RefleshFlow(FlowCoronal);
-                UpdatePivotPoint(ref _PointPivotCor, FlowCoronal, model.i_PosTrackSag, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere);
                 FlowCoronal.Refresh();
+                UpdatePivotPoint(ref _PointPivotCor, FlowCoronal, model.i_PosTrackSag, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere);
                 AxialPreparation();
+                UpdatePivotPoint(ref _PointPivotAx, FlowAxial, model.i_PosTrackSag, model.i_PosTrackCor, model.nImmCorSag, model.nImmCorSag);
+                UpdatePivotPoint(ref _PointPivotGeneric, FlowImage, model.i_PosTrackCor, model.i_PosTrackSag, model.nImmCorSag, model.nImmCorSag);
                 SagittalPreparation();
+                UpdatePivotPoint(ref _PointPivotSag, FlowSaggital, model.i_PosTrackCor, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere);
                 Application.DoEvents();
                 //label2.Text = "SPOSTA";
             }
             else if (b_Rotate)
             {
                 model.thetaCor = (float)Math.Atan2(posizioneRelForm.Y, posizioneRelForm.X);
-                FlowAxial.Refresh();
                 FlowCoronal.Refresh();
-                FlowSaggital.Refresh();
+                AxialPreparation();
+                SagittalPreparation();
             }
         }
 
         private void FlowSaggital_MouseMove(object sender, MouseEventArgs e)
         {
             posizioneRelForm = CoordsToCenterPivot(_PointMousePos, _PointPivotAx);
-
+            difference = e.Y - previousLocation;
+            _PointMousePos.X = e.X;
+            _PointMousePos.Y = e.Y;
             MuoviRuotaScorriCheck(FlowSaggital,_PointPivotCor, e);
             Cursor.Current = Cursors.Hand;
             if (b_Scroll)
@@ -865,14 +936,21 @@ namespace Test_Form
                 FlowSaggital.Refresh();
                 UpdatePivotPoint(ref _PointPivotSag, FlowSaggital, model.i_PosTrackCor, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere);
                 CoronalPreparation();
+                UpdatePivotPoint(ref _PointPivotCor, FlowCoronal, model.i_PosTrackSag, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere);
                 AxialPreparation();
+                UpdatePivotPoint(ref _PointPivotAx, FlowAxial, model.i_PosTrackSag, model.i_PosTrackCor, model.nImmCorSag, model.nImmCorSag);
+                UpdatePivotPoint(ref _PointPivotGeneric, FlowImage, model.i_PosTrackCor, model.i_PosTrackSag, model.nImmCorSag, model.nImmCorSag);
+
                 Application.DoEvents();
                 //label2.Text = "SPOSTA";
             }
             else if (b_Rotate)
             {
                 //label2.Text = "RUOTA";
-                model.thetaCor += difference;
+                model.thetaSag = (float)Math.Atan2(posizioneRelForm.Y, posizioneRelForm.X);
+                FlowSaggital.Refresh();
+                AxialPreparation();
+                CoronalPreparation();
             }
             previousLocation = e.Location.Y;
         }
@@ -899,10 +977,41 @@ namespace Test_Form
         {
 
         }
+
+        private void FlowCoronal_MouseUp(object sender, MouseEventArgs e)
+        {
+            down = false;
+            b_Move = false;
+            b_Rotate = false;
+            b_Scroll = false;
+            inUse = false;
+        }
+
+        private void FlowCoronal_MouseDown(object sender, MouseEventArgs e)
+        {
+            down = true;
+        }
+
+        private void FlowSaggital_MouseDown(object sender, MouseEventArgs e)
+        {
+            down = true;
+        }
+
+        private void FlowSaggital_MouseUp(object sender, MouseEventArgs e)
+        {
+            down = false;
+            b_Move = false;
+            b_Rotate = false;
+            b_Scroll = false;
+            inUse = false;
+        }
+
         private void _FormProgramma_MouseMoveOnHold(object? sender, MouseEventArgs e)
         {
 
         }
+
+
         private void _FormProgramma_MouseEnter(object sender, EventArgs e)
         {
             b_Move = false;
@@ -939,5 +1048,53 @@ namespace Test_Form
         #endregion Mouse
 
 
+    }
+
+    class GlobalBitmap
+    {
+        // Declare the global Bitmap as a static member
+        public static Bitmap Bitmap;
+
+        // Method to initialize the Bitmap
+        public static void InitializeBitmap(string filePath)
+        {
+            if (Bitmap != null)
+            {
+                Bitmap.Dispose();
+            }
+
+            Bitmap = new Bitmap(filePath);
+        }
+
+        // Method to resize the Bitmap
+        public static void ResizeBitmap(int newWidth, int newHeight)
+        {
+            if (Bitmap == null)
+            {
+                throw new InvalidOperationException("Bitmap has not been initialized.");
+            }
+
+            Bitmap resizedBitmap = new Bitmap(newWidth, newHeight);
+
+            using (Graphics graphics = Graphics.FromImage(resizedBitmap))
+            {
+                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                graphics.DrawImage(Bitmap, 0, 0, newWidth, newHeight);
+            }
+
+            Bitmap.Dispose();
+            Bitmap = resizedBitmap;
+        }
+
+        // Method to save the Bitmap to a file
+        public static void SaveBitmap(string filePath)
+        {
+            if (Bitmap == null)
+            {
+                throw new InvalidOperationException("Bitmap has not been initialized.");
+            }
+
+            Bitmap.Save(filePath, System.Drawing.Imaging.ImageFormat.Jpeg);
+        }
     }
 }

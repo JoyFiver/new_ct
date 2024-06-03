@@ -37,13 +37,14 @@
             this.scalaDiGrigiToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.FlowCoronal = new System.Windows.Forms.PictureBox();
             this.FlowSaggital = new System.Windows.Forms.PictureBox();
-            this.FlowImage = new System.Windows.Forms.FlowLayoutPanel();
+            this.FlowImage = new System.Windows.Forms.PictureBox();
             this.lbl1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.FlowAxial = new System.Windows.Forms.PictureBox();
             this._menuBar.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.FlowCoronal)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.FlowSaggital)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.FlowImage)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.FlowAxial)).BeginInit();
             this.SuspendLayout();
             // 
@@ -118,7 +119,9 @@
             this.FlowCoronal.TabIndex = 1;
             this.FlowCoronal.TabStop = false;
             this.FlowCoronal.Paint += new System.Windows.Forms.PaintEventHandler(this.FlowCoronal_Paint);
+            this.FlowCoronal.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FlowCoronal_MouseDown);
             this.FlowCoronal.MouseMove += new System.Windows.Forms.MouseEventHandler(this.FlowCoronal_MouseMove);
+            this.FlowCoronal.MouseUp += new System.Windows.Forms.MouseEventHandler(this.FlowCoronal_MouseUp);
             // 
             // FlowSaggital
             // 
@@ -131,7 +134,9 @@
             this.FlowSaggital.TabIndex = 1;
             this.FlowSaggital.TabStop = false;
             this.FlowSaggital.Paint += new System.Windows.Forms.PaintEventHandler(this.FlowSaggital_Paint);
+            this.FlowSaggital.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FlowSaggital_MouseDown);
             this.FlowSaggital.MouseMove += new System.Windows.Forms.MouseEventHandler(this.FlowSaggital_MouseMove);
+            this.FlowSaggital.MouseUp += new System.Windows.Forms.MouseEventHandler(this.FlowSaggital_MouseUp);
             // 
             // FlowImage
             // 
@@ -141,7 +146,9 @@
             this.FlowImage.Name = "FlowImage";
             this.FlowImage.Size = new System.Drawing.Size(250, 240);
             this.FlowImage.TabIndex = 42;
+            this.FlowImage.TabStop = false;
             this.FlowImage.Visible = false;
+            this.FlowImage.Paint += new System.Windows.Forms.PaintEventHandler(this.FlowImage_Paint);
             // 
             // lbl1
             // 
@@ -210,6 +217,7 @@
             this._menuBar.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.FlowCoronal)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.FlowSaggital)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.FlowImage)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.FlowAxial)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -223,7 +231,7 @@
         private ToolStripMenuItem fileToolStripMenuItem;
         private ToolStripMenuItem apriToolStripMenuItem;
         private ToolStripMenuItem modificaToolStripMenuItem;
-        public FlowLayoutPanel FlowImage;
+        public PictureBox FlowImage;
         private Label lbl1;
         private Label label2;
         private ToolStripMenuItem scalaDiGrigiToolStripMenuItem;

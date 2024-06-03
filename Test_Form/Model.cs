@@ -10,7 +10,7 @@ namespace Test_Form
     {
         // propfull +  2tab
 
-        private int I_PosTrackAx, I_PosTrackCor, I_PosTrackSag, NFileDaLeggere, NImmCorSag = 1024;
+        private int I_PosTrackAx, I_PosTrackCor, I_PosTrackSag, NFileDaLeggere = 800, NImmCorSag = 800;
         float ThetaAx = 0, ThetaCor = 0, ThetaSag = 0;
         public int i_PosTrackAx
         {
@@ -41,5 +41,7 @@ namespace Test_Form
         public float thetaAx { get => ThetaAx; set => ThetaAx = value; }
         public float thetaCor { get => ThetaCor; set => ThetaCor = value; }
         public float thetaSag { get => ThetaSag; set => ThetaSag = value; }
+
+
     }
 }

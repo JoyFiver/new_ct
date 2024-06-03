@@ -21,9 +21,12 @@ namespace Test_f
 
         #region Bitmap
 
-        public Bitmap Joy_Axial = new Bitmap(1024, 1024);
-        public Bitmap Joy_Coronal = new Bitmap(1024, 750);
-        public Bitmap Joy_Sagital = new Bitmap(1024, 750);
+        //public Bitmap Joy_Axial = new Bitmap(1024, 1024);
+        //public Bitmap Joy_Coronal = new Bitmap(1024, 750);
+        //public Bitmap Joy_Sagital = new Bitmap(1024, 750);
+        public Bitmap Joy_Axial;
+        public Bitmap Joy_Coronal;
+        public Bitmap Joy_Sagital;
 
         #endregion
 
@@ -58,6 +61,7 @@ namespace Test_f
 
         public void Form2_Resize(object sender, EventArgs e)
         {
+
             Dynamic_resizeForm();
             //System.Diagnostics.Debug.WriteLine(this.Width);
 
@@ -66,7 +70,7 @@ namespace Test_f
                 f.UpdatePivotPoint(ref f._PointPivotAx, f.FlowAxial, model.i_PosTrackSag, model.i_PosTrackCor, model.nImmCorSag, model.nImmCorSag);
                 f.UpdatePivotPoint(ref f._PointPivotCor, f.FlowCoronal, model.i_PosTrackSag, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere);
                 f.UpdatePivotPoint(ref f._PointPivotSag, f.FlowSaggital, model.i_PosTrackCor, model.i_PosTrackAx, model.nImmCorSag, model.nFileDaLeggere);
-                f.CreateGraphics().Clear(Color.Black);
+                //f.CreateGraphics().Clear(Color.Black);
                 DisegnaContorni();
             }
             i_OriginalForm_Width = f.Width;
@@ -147,72 +151,7 @@ namespace Test_f
         /// <param name="color1"></param>
         /// <param name="color2"></param>
 
-        /*public void DrawInclinedLineOnFlow(PictureBox flow, int posTrack1, int posTrack2, int maxIm1, int maxIm2, Brush color1, Brush color2,double theta,Point PointPivot)
-        {
-            Point[] _PointLine = new Point[2]; // linea di riferimento Coronale sull'assiale
-            if (!(Math.Round(theta,3) % Math.Round(Math.PI / 2,3) == 0))
-            {
-                /*double[,] rotationMatrix = { {(float)Math.Cos(theta), -(float)Math.Sin(theta)},{ (float)Math.Sin(theta), (float)Math.Cos(theta) } };
-                double[,] pos1 = new double[2, 1];
-                pos1[0, 0] = newRangeLineX(flow, posTrack1, maxIm1);
-                pos1[1,0] = flow.Location.Y + 5;
-                double[,] pos2 = new double[2, 1];
-                pos2[0, 0] = newRangeLineX(flow, posTrack1, maxIm1);
-                pos2[1, 0] = flow.Location.Y + 5 + flow.Height;
-
-                double[,] result1 = new double[2,1];
-                double[,] result2 = new double[2, 1];
-                result2 = f.MultiplyMatrix(rotationMatrix, pos2);
-                result1 =   f.MultiplyMatrix(rotationMatrix, pos1);
-                f.PointAssign(ref _PointLine[0], (int)result1[0,0],(int)result1[1, 0]); 
-                f.PointAssign(ref _PointLine[1], (int)result2[0, 0], (int)result2[1, 0]);
-                //VerticalLine
-                f.PointAssign(ref _PointLine[0], (int)(newRangeLineX(flow, posTrack1, maxIm1) + Math.Tan(theta) * (flow.Location.Y + flow.Height - PointPivot.Y)), flow.Location.Y + 5); //+ Math.Tan(theta) * (flow.Location.Y + flow.Height - PointPivot.Y)
-                f.PointAssign(ref _PointLine[1], (int)(newRangeLineX(flow, posTrack1, maxIm1) + Math.Tan(theta) * (flow.Location.Y + flow.Height - PointPivot.Y)), flow.Location.Y + flow.Height - 5); //- Math.Tan(theta) * (flow.Location.Y + flow.Height - PointPivot.Y)
-                g.DrawLine(new Pen(color1), _PointLine[0], _PointLine[1]);
-                //HorizontalLine
-                f.PointAssign(ref _PointLine[0], flow.Location.X + 5, (int)(newRangeLineY(flow, posTrack2, maxIm2) - Math.Tan(theta) * (flow.Location.X + flow.Width - PointPivot.X)));
-                f.PointAssign(ref _PointLine[1], flow.Location.X + flow.Width - 5, (int)(newRangeLineY(flow, posTrack2, maxIm2) + Math.Tan(theta) * (flow.Location.X + flow.Width - PointPivot.X)));
-                g.DrawLine(new Pen(color2), _PointLine[0], _PointLine[1]);
-            }
-            if (theta == 0)
-            {
-                //VerticalLine
-                f.PointAssign(ref _PointLine[0],newRangeLineX(flow, posTrack1, maxIm1) , flow.Location.Y + 5);
-                f.PointAssign(ref _PointLine[1], newRangeLineX(flow, posTrack1, maxIm1), flow.Location.Y + flow.Height - 5);
-                g.DrawLine(new Pen(color1), _PointLine[0], _PointLine[1]);
-                //HorizontalLine
-                f.PointAssign(ref _PointLine[0], flow.Location.X + 5, newRangeLineY(flow, posTrack2, maxIm2));
-                f.PointAssign(ref _PointLine[1], flow.Location.X + flow.Width - 5,newRangeLineY(flow, posTrack2, maxIm2));
-                g.DrawLine(new Pen(color2), _PointLine[0], _PointLine[1]);
-            }
-            // se pi/2
-            else
-            {
-
-            }
-
-            //g.DrawEllipse(new Pen(color1), PointPivot.X, PointPivot.Y, 10, 10);
-            //g.FillEllipse(color1, PointPivot.X, PointPivot.Y, 10, 10);
-            //
-        }*/
-
-        static Point RotatePoint(double x, double y, double cx, double cy, double angle)
-        {
-            // Trasla il punto in modo che il perno sia all'origine
-            double translatedX = x - cx;
-            double translatedY = y - cy;
-
-            // Applica la rotazione
-            double rotatedX = translatedX * Math.Cos(angle) - translatedY * Math.Sin(angle);
-            double rotatedY = translatedX * Math.Sin(angle) + translatedY * Math.Cos(angle);
-
-            // Trasla il punto di nuovo alla posizione originale del perno
-            int finalX = (int)(rotatedX + cx);
-            int finalY = (int)(rotatedY + cy);
-
-            return new Point(finalX, finalY);
-        }
+        
 
         public void DrawInclinedLineOnFlow(Graphics g,PictureBox flow, int posTrack1, int posTrack2, int maxIm1, int maxIm2, Brush color1, Brush color2, double theta, Point PointPivot)
         {
@@ -232,12 +171,12 @@ namespace Test_f
             f.PointAssign(ref _PointLine[0], (int)result1[0,0],(int)result1[1, 0]); 
             f.PointAssign(ref _PointLine[1], (int)result2[0, 0], (int)result2[1, 0]);*/
             //VerticalLine
-            _PointLine[0] = RotatePoint(newRangeLineX(flow, posTrack1, maxIm1), flow.Location.Y - 1000, PointPivot.X, PointPivot.Y, theta);
-            _PointLine[1] = RotatePoint(newRangeLineX(flow, posTrack1, maxIm1), flow.Location.Y + flow.Height + 1000, PointPivot.X, PointPivot.Y, theta);
+            _PointLine[0] = Rotate2DPoint(newRangeLineX(flow, posTrack1, maxIm1), flow.Location.Y - 1000, PointPivot.X, PointPivot.Y, theta);
+            _PointLine[1] = Rotate2DPoint(newRangeLineX(flow, posTrack1, maxIm1), flow.Location.Y + flow.Height + 1000, PointPivot.X, PointPivot.Y, theta);
             g.DrawLine(new Pen(color1), _PointLine[0], _PointLine[1]);
             //HorizontalLine
-            _PointLine[0] = RotatePoint(flow.Location.X - 1000, newRangeLineY(flow, posTrack2, maxIm2), PointPivot.X, PointPivot.Y, theta);
-            _PointLine[1] = RotatePoint(flow.Location.X + flow.Width + 1000, newRangeLineY(flow, posTrack2, maxIm2), PointPivot.X, PointPivot.Y, theta);
+            _PointLine[0] = Rotate2DPoint(flow.Location.X - 1000, newRangeLineY(flow, posTrack2, maxIm2), PointPivot.X, PointPivot.Y, theta);
+            _PointLine[1] = Rotate2DPoint(flow.Location.X + flow.Width + 1000, newRangeLineY(flow, posTrack2, maxIm2), PointPivot.X, PointPivot.Y, theta);
             g.DrawLine(new Pen(color2), _PointLine[0], _PointLine[1]);
 
             if (theta == 0)
@@ -288,13 +227,14 @@ namespace Test_f
                 }
                 if (c == f.FlowImage)
                 {
-                    //if (this.WindowState == FormWindowState.Maximized)
-                    //{
-                    //    FlowImage.Visible = true;
-                    //    loadingForm.Size = new Size(this.Width - FlowSaggital.Location.X + FlowSaggital.Width, this.Height - 10);
-                    //    newX = FlowSaggital.Location.X + FlowSaggital.Width + 10;
-                    //}
-                    //}
+                    if (f.WindowState == FormWindowState.Maximized)
+                    {
+                        newX = f.FlowSaggital.Location.X + f.FlowSaggital.Width + 10;
+                        c.Height = space_Y*2;
+                        c.Width = f.Width - f.FlowSaggital.Location.X - f.FlowSaggital.Width;
+                        c.Visible = true;
+                    }
+
                 }
                 //int FlowImage_X = this.Width - _trackBarSag.Location.X;
                 //loadingForm.Size = new Size(FlowImage_X / 2, FlowImage_X / 2);
@@ -308,7 +248,7 @@ namespace Test_f
             SmartResize(f.FlowAxial);
             SmartResize(f.FlowSaggital);
             SmartResize(f.FlowCoronal);
-            //SmartResize(FlowImage);
+            SmartResize(f.FlowImage);
 
         }
         public void PosButton(Control c)

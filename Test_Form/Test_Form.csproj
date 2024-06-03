@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="fo-dicom" Version="5.1.2" />
     <PackageReference Include="OpenTK" Version="4.8.2" />
   </ItemGroup>
 
