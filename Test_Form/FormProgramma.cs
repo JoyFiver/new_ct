@@ -313,10 +313,10 @@ namespace Test_Form
             { 
                 for (int x = -model.nImmCorSag/2; x < model.nImmCorSag/2; x++)
                 {
+                    Vector3 rotated_point = Rotate3DPoint(x, y, model.i_PosTrackAx - model.nFileDaLeggere / 2, Rx(FlowAxial, _PointPivotAx.X, model.nImmCorSag), Ry(FlowAxial, _PointPivotAx.Y, model.nImmCorSag), model.i_PosTrackAx, model.thetaSag, model.thetaCor, 0);
+                    Vector3 new_coords = rotated_point + center;
                     int x_center = x + model.nImmCorSag / 2;
-                    int y_center = y + model.nImmCorSag/2;
-                    Vector3 new_point = Rotate3DPoint(x, y, model.i_PosTrackAx - model.nFileDaLeggere / 2, Rx(FlowAxial, _PointPivotAx.X, model.nImmCorSag), Ry(FlowAxial, _PointPivotAx.Y, model.nImmCorSag), model.i_PosTrackAx, model.thetaSag, model.thetaCor, 0);
-                    Vector3 new_coords = new_point + center;
+                    int y_center = y + model.nImmCorSag / 2;
                     iArr_Axial[model.nImmCorSag * y_center + x_center] = CoordsToPixel(new_coords);
                 }
             }
@@ -342,17 +342,17 @@ namespace Test_Form
                 b_ArraycoronalePreparato = true;
 
             }
-            var center = new Vector3(model.nImmCorSag / 2, model.nImmCorSag / 2, model.nFileDaLeggere / 2);
+            Vector3 center = new Vector3(model.nImmCorSag / 2, model.nImmCorSag / 2, model.nFileDaLeggere / 2);
 
             Parallel.For(-model.nFileDaLeggere/2, model.nFileDaLeggere/2, z =>
             {
                 {
                     for (int x = -model.nImmCorSag/2; x < model.nImmCorSag/2; x++)
                     {
+                        Vector3 rotated_point = Rotate3DPoint(x, model.i_PosTrackCor - model.nImmCorSag/2, z, Rx(FlowAxial, _PointPivotCor.X, model.nImmCorSag),model.i_PosTrackCor ,Ry(FlowAxial, _PointPivotCor.Y, model.nFileDaLeggere), 0,0,model.thetaAx);
+                        Vector3 new_coords = rotated_point + center;
                         int x_center = x + model.nImmCorSag / 2;
                         int z_center = z + model.nFileDaLeggere / 2;
-                        Vector3 new_point = Rotate3DPoint(x, model.i_PosTrackCor, z, Rx(FlowAxial, _PointPivotCor.X, model.nImmCorSag),model.i_PosTrackCor ,Ry(FlowAxial, _PointPivotCor.Y, model.nFileDaLeggere), 0,0,model.thetaAx);
-                        Vector3 new_coords = new_point + center;
                         iArr_Coronal[model.nImmCorSag * z_center + x_center] = CoordsToPixel(new_coords);
                     }
                 }
@@ -382,16 +382,18 @@ namespace Test_Form
                 b_ArraysagittalePreparato = true;
             }
 
-            //int ind0 = 0;
-            //int ind1 = 0;
-            //int ind3 = model.nImmCorSag - Pos;
+            Vector3 center = new Vector3(model.nImmCorSag / 2, model.nImmCorSag / 2, model.nFileDaLeggere / 2);
 
-            Parallel.For(0, model.nFileDaLeggere, z =>
+            Parallel.For(-model.nFileDaLeggere/2, model.nFileDaLeggere/2, z =>
             {
-                for (int x = 0; x < model.nImmCorSag; x++)
+                for (int x = -model.nImmCorSag/2; x < model.nImmCorSag/2; x++)
                 {
-                    Vector3 new_point = Rotate3DPoint(model.i_PosTrackSag,x,z, Rx(FlowSaggital, _PointPivotCor.X, model.nImmCorSag), Ry(FlowSaggital, _PointPivotCor.Y, model.nFileDaLeggere), model.i_PosTrackSag , 0,0,model.thetaAx);
-                    //iArr_Sagital[model.nImmCorSag * z + x] = CoordsToPixel(new_point);
+
+                    Vector3 rotated_point = Rotate3DPoint(model.i_PosTrackSag - model.nImmCorSag / 2, x,z, Rx(FlowSaggital, _PointPivotCor.X, model.nImmCorSag), Ry(FlowSaggital, _PointPivotCor.Y, model.nFileDaLeggere), model.i_PosTrackSag , 0,0,model.thetaAx);
+                    Vector3 new_coords = rotated_point + center;
+                    int x_center = x + model.nImmCorSag / 2;
+                    int z_center = z + model.nFileDaLeggere / 2;
+                    iArr_Sagital[model.nImmCorSag * z_center + x_center] = CoordsToPixel(new_coords);
 
                 }
             });
